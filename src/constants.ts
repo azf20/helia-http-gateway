@@ -47,6 +47,11 @@ export const USE_TRUSTLESS_GATEWAYS = process.env.USE_TRUSTLESS_GATEWAYS !== 'fa
 export const USE_LIBP2P = process.env.USE_LIBP2P !== 'false'
 
 /**
+ * If not set, we will not listen for incoming connections.
+ */
+export const USE_LISTENERS = process.env.USE_LISTENERS === 'true'
+
+/**
  * If not set, we will use a memory datastore by default.
  */
 export const FILE_DATASTORE_PATH = process.env.FILE_DATASTORE_PATH ?? undefined

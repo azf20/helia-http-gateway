@@ -1,6 +1,7 @@
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { createDelegatedRoutingV1HttpApiClient } from '@helia/delegated-routing-v1-http-api-client'
+import { autoNAT } from '@libp2p/autonat'
 import { bootstrap } from '@libp2p/bootstrap'
 import { circuitRelayTransport } from '@libp2p/circuit-relay-v2'
 import { identify, type Identify } from '@libp2p/identify'
@@ -15,7 +16,7 @@ import { ipnsSelector } from 'ipns/selector'
 import { ipnsValidator } from 'ipns/validator'
 import { createLibp2p as create, type Libp2pOptions, type ServiceFactoryMap } from 'libp2p'
 import isPrivate from 'private-ip'
-import { DELEGATED_ROUTING_V1_HOST, METRICS, USE_DELEGATED_ROUTING, USE_DHT_ROUTING } from './constants.js'
+import { DELEGATED_ROUTING_V1_HOST, METRICS, USE_DELEGATED_ROUTING, USE_DHT_ROUTING, USE_LISTENERS } from './constants.js'
 import type { Libp2p, ServiceMap } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { HeliaInit } from 'helia'
@@ -42,12 +43,12 @@ export async function getCustomLibp2p ({ datastore }: HeliaGatewayLibp2pOptions)
     libp2pServices.delegatedRouting = () => createDelegatedRoutingV1HttpApiClient(DELEGATED_ROUTING_V1_HOST)
   }
 
-  if (USE_DHT_ROUTING) {
+  if (USE_DHT_ROUTING || USE_LISTENERS) {
     libp2pServices.dht = kadDHT({
       protocol: '/ipfs/kad/1.0.0',
       peerInfoMapper: removePrivateAddressesMapper,
       // don't do DHT server work.
-      clientMode: true,
+      clientMode: !USE_LISTENERS,
       validators: {
         ipns: ipnsValidator
       },
@@ -57,12 +58,21 @@ export async function getCustomLibp2p ({ datastore }: HeliaGatewayLibp2pOptions)
     })
   }
 
+  const listen = USE_LISTENERS
+    ? [
+        '/ip4/0.0.0.0/tcp/0', // IPv4 with dynamic port assignment
+        '/ip6/::/tcp/0' // IPv6 with dynamic port assignment
+      ]
+    : []
+
+  if (USE_LISTENERS) {
+    libp2pServices.autonat = autoNAT()
+  }
+
   const options: Libp2pOptions<HeliaGatewayLibp2pServices> = {
     datastore,
     addresses: {
-      listen: [
-        // helia-http-gateway is not dialable, we're only retrieving data from IPFS network, and then providing that data via a web2 http interface.
-      ]
+      listen
     },
     transports: [
       circuitRelayTransport(),
