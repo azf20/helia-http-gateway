@@ -142,7 +142,7 @@ export function httpGateway (opts: HeliaHTTPGatewayOptions): RouteOptions[] {
 
     try {
       let done = false
-      let value = undefined
+      let value
 
       while (!done) {
         ({ done, value } = await raceSignal(reader.read(), options.signal))

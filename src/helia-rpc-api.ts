@@ -1,8 +1,11 @@
+import { createRequire } from 'module'
 import { GC_TIMEOUT_MS, HEALTHCHECK_TIMEOUT_MS } from './constants.js'
 import { getRequestAwareSignal } from './helia-server.js'
 import type { VerifiedFetch } from '@helia/verified-fetch'
 import type { FastifyReply, FastifyRequest, RouteOptions } from 'fastify'
 import type { Helia } from 'helia'
+
+const require = createRequire(import.meta.url)
 
 const HELIA_RELEASE_INFO_API = (version: string): string => `https://api.github.com/repos/ipfs/helia/git/ref/tags/helia-v${version}`
 
@@ -22,9 +25,7 @@ export function rpcApi (opts: HeliaRPCAPIOptions): RouteOptions[] {
     try {
       if (heliaVersionInfo === undefined) {
         log('fetching Helia version info')
-        const { default: packageJson } = await import('../../node_modules/helia/package.json', {
-          assert: { type: 'json' }
-        })
+        const packageJson = require('../../node_modules/helia/package.json')
         const { version: heliaVersionString } = packageJson
         log('helia version string:', heliaVersionString)
 
@@ -37,7 +38,7 @@ export function rpcApi (opts: HeliaRPCAPIOptions): RouteOptions[] {
           }
         } else {
           // if this is not a next version, we will fetch the commit from github.
-          const ghResp = await (await fetch(HELIA_RELEASE_INFO_API(heliaVersionString))).json()
+          const ghResp = await (await fetch(HELIA_RELEASE_INFO_API(heliaVersionString as string))).json()
           heliaVersionInfo = {
             Version: heliaVersionString,
             Commit: ghResp.object.sha.slice(0, 7)
